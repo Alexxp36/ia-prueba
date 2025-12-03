@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <title>Perros y Gatos</title>
+    <title>Perros, Gatos y Humanos</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 
@@ -22,9 +22,9 @@
     <main>
       <div class="px-4 py-2 my-2 text-center border-bottom">
         <img class="d-block mx-auto mb-2" src="LogotipoV2-Simple.png" alt="" width="80" height="80">
-        <h1 class="display-5 fw-bold">Perros y gatos</h1>
+        <h1 class="display-5 fw-bold">Perros, Gatos y Humanos</h1>
         <div class="col-lg-6 mx-auto">
-          <p class="lead mb-0">Clasificaci&oacute;n de im&aacute;genes (Perro o Gato) usando la c&aacute;mara web utilizando Tensorflow.js</p>
+          <p class="lead mb-0">Clasificaci&oacute;n de im&aacute;genes (Perro, Gato o Humano) usando la c&aacute;mara web utilizando Tensorflow.js</p>
           <p class="lead mb-4">Revisa <a href="https://youtube.com/RingaTech">mi canal</a> para este y otros proyectos</p>
         </div>
       </div>
@@ -37,7 +37,7 @@
             <video id="video" playsinline autoplay style="width: 1px;"></video>
             <button class="btn btn-primary mb-2" id="cambiar-camara" onclick="cambiarCamara();">Cambiar camara</button>
             <canvas id="canvas" width="400" height="400" style="max-width: 100%;"></canvas>
-            <canvas id="otrocanvas" width="150" height="150" style="display: none"></canvas>
+            <canvas id="otrocanvas" width="224" height="224" style="display: none"></canvas>
             <div id="resultado"></div>            
           </div>
         </div>
@@ -143,26 +143,24 @@
 
     function predecir() {
       if (modelo != null) {
-        resample_single(canvas, 100, 100, otrocanvas);
+        resample_single(canvas, 224, 224, otrocanvas);
 
         //Hacer la predicción
         var ctx2 = otrocanvas.getContext("2d");
-        var imgData = ctx2.getImageData(0,0, 100, 100);
+        var imgData = ctx2.getImageData(0,0, 224, 224);
 
         var arr = [];
-        var arr100 = [];
+        var arr224 = [];
 
         for (var p=0; p < imgData.data.length; p+= 4) {
-          var rojo = imgData.data[p] / 255;
-          var verde = imgData.data[p+1] / 255;
-          var azul = imgData.data[p+2] / 255;
+          var rojo = (imgData.data[p] / 127.5) - 1;
+          var verde = (imgData.data[p+1] / 127.5) - 1;
+          var azul = (imgData.data[p+2] / 127.5) - 1;
 
-          var gris = (rojo+verde+azul)/3;
-
-          arr100.push([gris]);
-          if (arr100.length == 100) {
-            arr.push(arr100);
-            arr100 = [];
+          arr224.push([rojo, verde, azul]);
+          if (arr224.length == 224) {
+            arr.push(arr224);
+            arr224 = [];
           }
         }
 
@@ -171,12 +169,18 @@
         var tensor = tf.tensor4d(arr);
         var resultado = modelo.predict(tensor).dataSync();
 
-        var respuesta;
-        if (resultado <= .5) {
-          respuesta = "Gato";
-        } else {
-          respuesta = "Perro";
+        // Encontrar la clase con mayor probabilidad
+        var clases = ["Gato", "Humano", "Perro"];
+        var maxIndex = 0;
+        var maxProb = resultado[0];
+        for (var i = 1; i < resultado.length; i++) {
+          if (resultado[i] > maxProb) {
+            maxProb = resultado[i];
+            maxIndex = i;
+          }
         }
+
+        var respuesta = clases[maxIndex];
         document.getElementById("resultado").innerHTML = respuesta;
 
       }
