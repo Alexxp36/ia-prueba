@@ -75,8 +75,14 @@
 
     (async() => {
       console.log("Cargando modelo...");
-      modelo = await tf.loadLayersModel("model.json");
-      console.log("Modelo cargado");
+      try {
+        modelo = await tf.loadLayersModel("model.json");
+        console.log("Modelo cargado exitosamente");
+        console.log("Input shape:", modelo.inputs[0].shape);
+        console.log("Output shape:", modelo.outputs[0].shape);
+      } catch(error) {
+        console.error("Error cargando modelo:", error);
+      }
     })();
 
     window.onload = function() {
@@ -143,46 +149,58 @@
 
     function predecir() {
       if (modelo != null) {
-        resample_single(canvas, 224, 224, otrocanvas);
+        try {
+          resample_single(canvas, 224, 224, otrocanvas);
 
-        //Hacer la predicción
-        var ctx2 = otrocanvas.getContext("2d");
-        var imgData = ctx2.getImageData(0,0, 224, 224);
+          //Hacer la predicción
+          var ctx2 = otrocanvas.getContext("2d");
+          var imgData = ctx2.getImageData(0,0, 224, 224);
 
-        var arr = [];
-        var arr224 = [];
+          var arr = [];
+          var arr224 = [];
 
-        for (var p=0; p < imgData.data.length; p+= 4) {
-          var rojo = (imgData.data[p] / 127.5) - 1;
-          var verde = (imgData.data[p+1] / 127.5) - 1;
-          var azul = (imgData.data[p+2] / 127.5) - 1;
+          for (var p=0; p < imgData.data.length; p+= 4) {
+            var rojo = (imgData.data[p] / 127.5) - 1;
+            var verde = (imgData.data[p+1] / 127.5) - 1;
+            var azul = (imgData.data[p+2] / 127.5) - 1;
 
-          arr224.push([rojo, verde, azul]);
-          if (arr224.length == 224) {
-            arr.push(arr224);
-            arr224 = [];
+            arr224.push([rojo, verde, azul]);
+            if (arr224.length == 224) {
+              arr.push(arr224);
+              arr224 = [];
+            }
           }
-        }
 
-        arr = [arr];
+          arr = [arr];
 
-        var tensor = tf.tensor4d(arr);
-        var resultado = modelo.predict(tensor).dataSync();
+          var tensor = tf.tensor4d(arr);
+          var resultado = modelo.predict(tensor).dataSync();
 
-        // Encontrar la clase con mayor probabilidad
-        var clases = ["Gato", "Humano", "Perro"];
-        var maxIndex = 0;
-        var maxProb = resultado[0];
-        for (var i = 1; i < resultado.length; i++) {
-          if (resultado[i] > maxProb) {
-            maxProb = resultado[i];
-            maxIndex = i;
+          console.log("Predicción:", resultado);
+
+          // Encontrar la clase con mayor probabilidad
+          var clases = ["Gato", "Humano", "Perro"];
+          var maxIndex = 0;
+          var maxProb = resultado[0];
+          for (var i = 1; i < resultado.length; i++) {
+            if (resultado[i] > maxProb) {
+              maxProb = resultado[i];
+              maxIndex = i;
+            }
           }
+
+          var respuesta = clases[maxIndex];
+          console.log("Clase detectada:", respuesta, "Probabilidad:", maxProb);
+          document.getElementById("resultado").innerHTML = respuesta;
+
+          // Limpiar tensor
+          tensor.dispose();
+
+        } catch(error) {
+          console.error("Error en predicción:", error);
         }
-
-        var respuesta = clases[maxIndex];
-        document.getElementById("resultado").innerHTML = respuesta;
-
+      } else {
+        console.log("Modelo aún no cargado...");
       }
 
       setTimeout(predecir, 150);
