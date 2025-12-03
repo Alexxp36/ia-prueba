@@ -38,7 +38,8 @@
             <button class="btn btn-primary mb-2" id="cambiar-camara" onclick="cambiarCamara();">Cambiar camara</button>
             <canvas id="canvas" width="400" height="400" style="max-width: 100%;"></canvas>
             <canvas id="otrocanvas" width="224" height="224" style="display: none"></canvas>
-            <div id="resultado"></div>            
+            <div id="resultado"></div>
+            <div id="modelo-info" style="font-size: 0.8rem; color: #666; margin-top: 10px;"></div>            
           </div>
         </div>
       </div>
@@ -75,14 +76,28 @@
     var clases = {};
 
     (async() => {
-      console.log("Cargando modelo...");
+      console.log("🔄 Cargando modelo desde: modelo_IA/tfjs_model/model.json");
       modelo = await tf.loadLayersModel("modelo_IA/tfjs_model/model.json");
-      console.log("Modelo cargado");
+      console.log("✅ Modelo cargado exitosamente");
+      console.log("📊 Arquitectura del modelo:", modelo.summary());
+
+      // Verificar la forma de salida del modelo
+      const outputShape = modelo.outputShape;
+      console.log("🎯 Forma de salida del modelo:", outputShape);
+      const numClases = outputShape[outputShape.length - 1];
+      console.log("🔢 Número de clases:", numClases);
 
       // Cargar clases
+      console.log("🔄 Cargando clases desde: modelo_IA/clases.json");
       const response = await fetch("modelo_IA/clases.json");
       clases = await response.json();
-      console.log("Clases cargadas:", clases);
+      console.log("✅ Clases cargadas:", clases);
+      console.log("📝 Número de clases en archivo:", Object.keys(clases).length);
+
+      // Mostrar info en la página
+      const clasesNombres = Object.keys(clases).join(", ");
+      document.getElementById("modelo-info").innerHTML =
+        `Modelo: ${numClases} clases (${clasesNombres}) - MobileNetV2`;
     })();
 
     window.onload = function() {
@@ -174,6 +189,11 @@
 
         // Predecir
         var resultado = modelo.predict(tensor).dataSync();
+
+        // Log para depuración (solo cada 30 predicciones para no saturar)
+        if (Math.random() < 0.03) {
+          console.log("🎲 Predicción:", Array.from(resultado).map(v => v.toFixed(3)));
+        }
 
         // Encontrar la clase con mayor probabilidad
         var maxIdx = 0;
